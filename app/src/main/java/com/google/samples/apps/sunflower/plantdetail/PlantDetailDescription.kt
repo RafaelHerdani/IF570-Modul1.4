@@ -47,11 +47,12 @@ import com.google.samples.apps.sunflower.viewmodels.PlantDetailViewModel
 
 @Composable
 fun PlantDetailDescription(plantDetailViewModel: PlantDetailViewModel) {
-    // Observes values coming from the VM's LiveData<Plant> field
+    // Observes values coming from the VM's LiveData<Plant> field as State<Plant?>
     val plant by plantDetailViewModel.plant.observeAsState()
 
-    // If plant is not null, display the content
+    // New emissions from plant will make PlantDetailDescription recompose as the state's read here
     plant?.let {
+        // If plant is not null, display the content
         PlantDetailContent(it)
     }
 }
@@ -79,15 +80,6 @@ private fun PlantName(name: String) {
     )
 }
 
-@Preview
-@Composable
-private fun PlantDetailContentPreview() {
-    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
-    SunflowerTheme {
-        PlantDetailContent(plant)
-    }
-}
-
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun PlantWatering(wateringInterval: Int) {
@@ -107,20 +99,14 @@ private fun PlantWatering(wateringInterval: Int) {
         )
 
         val wateringIntervalText = pluralStringResource(
-            R.plurals.watering_needs_suffix, wateringInterval, wateringInterval
+            R.plurals.watering_needs_suffix,
+            wateringInterval,
+            wateringInterval
         )
         Text(
             text = wateringIntervalText,
             modifier = centerWithPaddingModifier.padding(bottom = normalPadding)
         )
-    }
-}
-
-@Preview
-@Composable
-private fun PlantWateringPreview() {
-    SunflowerTheme {
-        PlantWatering(7)
     }
 }
 
@@ -147,9 +133,19 @@ private fun PlantDescription(description: String) {
 
 @Preview
 @Composable
-private fun PlantDescriptionPreview() {
+private fun PlantDetailContentPreview() {
+    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
     SunflowerTheme {
-        PlantDescription("HTML<br><br>description")
+        PlantDetailContent(plant)
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PlantDetailContentDarkPreview() {
+    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
+    SunflowerTheme {
+        PlantDetailContent(plant)
     }
 }
 
@@ -161,11 +157,18 @@ private fun PlantNamePreview() {
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview
 @Composable
-private fun PlantDetailContentDarkPreview() {
-    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
+private fun PlantWateringPreview() {
     SunflowerTheme {
-        PlantDetailContent(plant)
+        PlantWatering(7)
+    }
+}
+
+@Preview
+@Composable
+private fun PlantDescriptionPreview() {
+    SunflowerTheme {
+        PlantDescription("HTML<br><br>description")
     }
 }

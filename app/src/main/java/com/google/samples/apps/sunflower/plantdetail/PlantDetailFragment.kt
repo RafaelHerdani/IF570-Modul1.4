@@ -21,7 +21,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ShareCompat
@@ -55,9 +54,12 @@ class PlantDetailFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         val binding = DataBindingUtil.inflate<FragmentPlantDetailBinding>(
-            inflater, R.layout.fragment_plant_detail, container, false
+            inflater,
+            R.layout.fragment_plant_detail,
+            container,
+            false
         ).apply {
             viewModel = plantDetailViewModel
             lifecycleOwner = viewLifecycleOwner
@@ -111,11 +113,17 @@ class PlantDetailFragment : Fragment() {
             }
 
             composeView.apply {
-                // Dispose the Composition when the view's LifecycleOwner
-                // is destroyed
+                // By default, the Composition is disposed when ComposeView is detached
+                // from the window. This causes problems during transitions as the ComposeView
+                // will still be visible on the screen after it's detached from the window.
+                // Instead, to dispose the Composition when the Fragment view lifecycle is
+                // destroyed, we set the DisposeOnViewTreeLifecycleDestroyed strategy as the
+                // ViewCompositionStrategy for this ComposeView
                 setViewCompositionStrategy(
                     ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
                 )
+
+                // Add Jetpack Compose content to this View
                 setContent {
                     SunflowerTheme {
                         PlantDetailDescription(plantDetailViewModel)
