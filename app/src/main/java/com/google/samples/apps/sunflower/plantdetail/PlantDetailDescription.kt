@@ -16,148 +16,156 @@
 
 package com.google.samples.apps.sunflower.plantdetail
 
-import android.content.Intent
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.content.res.Configuration
+import android.text.method.LinkMovementMethod
+import android.widget.TextView
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.app.ShareCompat
-import androidx.core.widget.NestedScrollView
-import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.navigation.findNavController
-import androidx.navigation.fragment.navArgs
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.text.HtmlCompat
 import com.google.samples.apps.sunflower.R
 import com.google.samples.apps.sunflower.data.Plant
-import com.google.samples.apps.sunflower.databinding.FragmentPlantDetailBinding
-import com.google.samples.apps.sunflower.utilities.InjectorUtils
+import com.google.samples.apps.sunflower.theme.SunflowerTheme
 import com.google.samples.apps.sunflower.viewmodels.PlantDetailViewModel
 
-/**
- * A fragment representing a single Plant detail screen.
- */
-class PlantDetailFragment : Fragment() {
+@Composable
+fun PlantDetailDescription(plantDetailViewModel: PlantDetailViewModel) {
+    // Observes values coming from the VM's LiveData<Plant> field
+    val plant by plantDetailViewModel.plant.observeAsState()
 
-    private val args: PlantDetailFragmentArgs by navArgs()
-
-    private val plantDetailViewModel: PlantDetailViewModel by viewModels {
-        InjectorUtils.providePlantDetailViewModelFactory(requireActivity(), args.plantId)
+    // If plant is not null, display the content
+    plant?.let {
+        PlantDetailContent(it)
     }
+}
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val binding = DataBindingUtil.inflate<FragmentPlantDetailBinding>(
-            inflater, R.layout.fragment_plant_detail, container, false
-        ).apply {
-            viewModel = plantDetailViewModel
-            lifecycleOwner = viewLifecycleOwner
-            callback = object : Callback {
-                override fun add(plant: Plant?) {
-                    plant?.let {
-                        hideAppBarFab(fab)
-                        plantDetailViewModel.addPlantToGarden()
-                        Snackbar.make(root, R.string.added_plant_to_garden, Snackbar.LENGTH_LONG)
-                            .show()
-                    }
-                }
-            }
-
-            var isToolbarShown = false
-
-            // scroll change listener begins at Y = 0 when image is fully collapsed
-            plantDetailScrollview.setOnScrollChangeListener(
-                NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
-
-                    // User scrolled past image to height of toolbar and the title text is
-                    // underneath the toolbar, so the toolbar should be shown.
-                    val shouldShowToolbar = scrollY > toolbar.height
-
-                    // The new state of the toolbar differs from the previous state; update
-                    // appbar and toolbar attributes.
-                    if (isToolbarShown != shouldShowToolbar) {
-                        isToolbarShown = shouldShowToolbar
-
-                        // Use shadow animator to add elevation if toolbar is shown
-                        appbar.isActivated = shouldShowToolbar
-
-                        // Show the plant name if toolbar is shown
-                        toolbarLayout.isTitleEnabled = shouldShowToolbar
-                    }
-                }
-            )
-
-            toolbar.setNavigationOnClickListener { view ->
-                view.findNavController().navigateUp()
-            }
-
-            toolbar.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.action_share -> {
-                        createShareIntent()
-                        true
-                    }
-                    else -> false
-                }
-            }
-
-            composeView.apply {
-                // Dispose the Composition when the view's LifecycleOwner
-                // is destroyed
-                setViewCompositionStrategy(
-                    ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-                )
-                setContent {
-                    MaterialTheme {
-                        PlantDetailDescription(plantDetailViewModel)
-                    }
-                }
-            }
+@Composable
+fun PlantDetailContent(plant: Plant) {
+    Surface {
+        Column(Modifier.padding(dimensionResource(R.dimen.margin_normal))) {
+            PlantName(plant.name)
+            PlantWatering(plant.wateringInterval)
+            PlantDescription(plant.description)
         }
-        setHasOptionsMenu(true)
+    }
+}
 
-        return binding.root
+@Composable
+private fun PlantName(name: String) {
+    Text(
+        text = name,
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = dimensionResource(R.dimen.margin_small))
+            .wrapContentWidth(align = Alignment.CenterHorizontally)
+    )
+}
+
+@Preview
+@Composable
+private fun PlantDetailContentPreview() {
+    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
+    SunflowerTheme {
+        PlantDetailContent(plant)
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun PlantWatering(wateringInterval: Int) {
+    Column(Modifier.fillMaxWidth()) {
+        // Same modifier used by both Texts
+        val centerWithPaddingModifier = Modifier
+            .padding(horizontal = dimensionResource(R.dimen.margin_small))
+            .align(Alignment.CenterHorizontally)
+
+        val normalPadding = dimensionResource(R.dimen.margin_normal)
+
+        Text(
+            text = stringResource(R.string.watering_needs_prefix),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            fontWeight = FontWeight.Bold,
+            modifier = centerWithPaddingModifier.padding(top = normalPadding)
+        )
+
+        val wateringIntervalText = pluralStringResource(
+            R.plurals.watering_needs_suffix, wateringInterval, wateringInterval
+        )
+        Text(
+            text = wateringIntervalText,
+            modifier = centerWithPaddingModifier.padding(bottom = normalPadding)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PlantWateringPreview() {
+    SunflowerTheme {
+        PlantWatering(7)
+    }
+}
+
+@Composable
+private fun PlantDescription(description: String) {
+    // Remembers the HTML formatted description. Re-executes on a new description
+    val htmlDescription = remember(description) {
+        HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
-    // Helper function for calling a share functionality.
-    // Should be used when user presses a share button/menu item.
-    @Suppress("DEPRECATION")
-    private fun createShareIntent() {
-        val shareText = plantDetailViewModel.plant.value.let { plant ->
-            if (plant == null) {
-                ""
-            } else {
-                getString(R.string.share_text_plant, plant.name)
+    // Displays the TextView on the screen and updates with the HTML description when inflated
+    // Updates to htmlDescription will make AndroidView recompose and update the text
+    AndroidView(
+        factory = { context ->
+            TextView(context).apply {
+                movementMethod = LinkMovementMethod.getInstance()
             }
+        },
+        update = {
+            it.text = htmlDescription
         }
-        val shareIntent = ShareCompat.IntentBuilder.from(requireActivity())
-            .setText(shareText)
-            .setType("text/plain")
-            .createChooserIntent()
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        startActivity(shareIntent)
-    }
+    )
+}
 
-    // FloatingActionButtons anchored to AppBarLayouts have their visibility controlled by the scroll position.
-    // We want to turn this behavior off to hide the FAB when it is clicked.
-    //
-    // This is adapted from Chris Banes' Stack Overflow answer: https://stackoverflow.com/a/41442923
-    private fun hideAppBarFab(fab: FloatingActionButton) {
-        val params = fab.layoutParams as CoordinatorLayout.LayoutParams
-        val behavior = params.behavior as FloatingActionButton.Behavior
-        behavior.isAutoHideEnabled = false
-        fab.hide()
+@Preview
+@Composable
+private fun PlantDescriptionPreview() {
+    SunflowerTheme {
+        PlantDescription("HTML<br><br>description")
     }
+}
 
-    interface Callback {
-        fun add(plant: Plant?)
+@Preview
+@Composable
+private fun PlantNamePreview() {
+    SunflowerTheme {
+        PlantName("Apple")
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PlantDetailContentDarkPreview() {
+    val plant = Plant("id", "Apple", "HTML<br><br>description", 3, 30, "")
+    SunflowerTheme {
+        PlantDetailContent(plant)
     }
 }
